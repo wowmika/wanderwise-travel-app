@@ -86,8 +86,8 @@ Sonu Shaw | React Developer | Frontend Specialist
 
 I built this project to showcase my ability to create user-centric applications that solve specific user pain points.
 
-LinkedIn
+LinkedIn - https://www.linkedin.com/in/therealdeal1sonu/
 
-GitHub
+GitHub - https://github.com/wowmika
 
 This project is licensed under the MIT License.
