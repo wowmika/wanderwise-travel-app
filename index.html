@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WanderWise - Travel App</title>
+    
+    <!-- Tailwind CSS for Styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React and ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Babel to translate JSX in browser -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Lucide Icons (Vanilla JS version) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        /* Custom Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // --- ICON ADAPTER ---
+        // The Lucide CDN returns icon definitions (arrays), not React components.
+        // We must convert them into React components manually.
+        const createIcon = (iconData) => {
+            if (!iconData) return () => null; // Safety check
+            
+            return ({ color = "currentColor", size = 24, className = "", ...props }) => {
+                return React.createElement(
+                    'svg',
+                    {
+                        xmlns: "http://www.w3.org/2000/svg",
+                        width: size,
+                        height: size,
+                        viewBox: "0 0 24 24",
+                        fill: "none",
+                        stroke: color,
+                        strokeWidth: "2",
+                        strokeLinecap: "round",
+                        strokeLinejoin: "round",
+                        className: className,
+                        ...props
+                    },
+                    iconData.map(([tag, attrs], index) => 
+                        React.createElement(tag, { ...attrs, key: index })
+                    )
+                );
+            };
+        };
+
+        // List of icons we need
+        const requiredIcons = [
+            'MapPin', 'Calendar', 'DollarSign', 'BookOpen', 'Utensils', 'Info', 
+            'ChevronLeft', 'AlertTriangle', 'CheckCircle', 'Coffee', 'Car', 
+            'ShoppingBag', 'BedDouble', 'Navigation', 'Star'
+        ];
+
+        // Generate React Components from the vanilla Lucide library
+        const Icons = requiredIcons.reduce((acc, name) => {
+            acc[name] = createIcon(lucide.icons[name]);
+            return acc;
+        }, {});
+
+        // Destructure for easy usage in the app
+        const { 
+            MapPin, Calendar, DollarSign, BookOpen, Utensils, Info, 
+            ChevronLeft, AlertTriangle, CheckCircle, Coffee, Car, 
+            ShoppingBag, BedDouble, Navigation, Star 
+        } = Icons;
+
+        // --- MOCK DATA ---
+        const destinations = [
+            {
+                id: 'tokyo',
+                name: 'Tokyo, Japan',
+                image: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&q=80&w=1000',
+                description: 'A neon-lit blend of old and new, where ancient temples stand beside futuristic skyscrapers.',
+                avgPrice: '$$$',
+                tags: ['City', 'Culture', 'Food'],
+                itinerary: [
+                    {
+                        day: 1,
+                        title: 'Shinjuku & Shibuya',
+                        activities: [
+                            { time: '09:00 AM', title: 'Meiji Shrine', type: 'sightseeing' },
+                            { time: '12:00 PM', title: 'Lunch at Omoide Yokocho', type: 'food' },
+                            { time: '03:00 PM', title: 'Shibuya Crossing', type: 'sightseeing' },
+                            { time: '07:00 PM', title: 'Golden Gai Bar Hopping', type: 'nightlife' }
+                        ]
+                    },
+                    {
+                        day: 2,
+                        title: 'Asakusa & Ueno',
+                        activities: [
+                            { time: '09:00 AM', title: 'Senso-ji Temple', type: 'sightseeing' },
+                            { time: '01:00 PM', title: 'Ueno Park & Zoo', type: 'leisure' },
+                            { time: '06:00 PM', title: 'Tokyo Skytree Sunset', type: 'view' }
+                        ]
+                    }
+                ],
+                budget: {
+                    currency: 'JPY',
+                    level: 'High',
+                    breakdown: [
+                        { item: 'Hostel/Hotel', cost: '¥4,000 - ¥15,000' },
+                        { item: 'Street Food Meal', cost: '¥800 - ¥1,500' },
+                        { item: 'Subway Ticket', cost: '¥200 - ¥300' },
+                        { item: 'Beer (Pint)', cost: '¥500 - ¥800' }
+                    ]
+                },
+                rules: {
+                    laws: [
+                        'Strict drug laws. Zero tolerance.',
+                        'Carrying a knife (even a pocket knife) can get you arrested.',
+                        'Smoking is restricted to designated areas, even outdoors.'
+                    ],
+                    etiquette: [
+                        'Do not tip. It is considered rude.',
+                        'Quiet on trains. No phone calls.',
+                        'Remove shoes when entering homes, ryokans, and some izakayas.',
+                        'Bow when greeting; handshakes are less common.'
+                    ]
+                },
+                culinary: {
+                    mustTry: [
+                        { name: 'Sushi', desc: 'Fresh raw fish on rice. Try conveyor belt sushi.' },
+                        { name: 'Ramen', desc: 'Noodle soup. Tonkotsu is a classic.' },
+                        { name: 'Takoyaki', desc: 'Octopus balls found at street stalls.' }
+                    ],
+                    tips: [
+                        'Slurping noodles is polite; it shows you enjoy the meal.',
+                        'Do not stick chopsticks vertically into rice.',
+                        'Convenience store (Konbini) food is high quality and safe.'
+                    ]
+                },
+                hotels: [
+                    { name: 'Park Hyatt Tokyo', rating: 5, price: '¥80,000+', type: 'Luxury', area: 'Shinjuku' },
+                    { name: 'Nui. Hostel & Bar', rating: 4.5, price: '¥4,000', type: 'Budget', area: 'Asakusa' },
+                    { name: 'APA Hotel', rating: 3.5, price: '¥12,000', type: 'Mid-Range', area: 'Shibuya' }
+                ],
+                markets: [
+                    { name: 'Tsukiji Outer Market', type: 'Food', desc: 'Fresh seafood and street snacks.' },
+                    { name: 'Nakamise Shopping Street', type: 'Souvenirs', desc: 'Traditional crafts near Senso-ji.' },
+                    { name: 'Takeshita Street', type: 'Fashion', desc: 'Youth fashion and crepes in Harajuku.' }
+                ],
+                places: [
+                    { name: 'TeamLab Planets', type: 'Art', distance: '15 mins by subway' },
+                    { name: 'Tokyo Tower', type: 'Landmark', distance: '20 mins by subway' }
+                ]
+            },
+            {
+                id: 'rome',
+                name: 'Rome, Italy',
+                image: 'https://images.unsplash.com/photo-1552832230-c0197dd311b5?auto=format&fit=crop&q=80&w=1000',
+                description: 'The Eternal City, boasting nearly 3,000 years of globally influential art, architecture, and culture.',
+                avgPrice: '$$',
+                tags: ['History', 'Art', 'Food'],
+                itinerary: [
+                    {
+                        day: 1,
+                        title: 'Ancient Rome',
+                        activities: [
+                            { time: '08:30 AM', title: 'Colosseum Tour', type: 'sightseeing' },
+                            { time: '11:00 AM', title: 'Roman Forum', type: 'sightseeing' },
+                            { time: '01:00 PM', title: 'Carbonara in Trastevere', type: 'food' },
+                            { time: '04:00 PM', title: 'Pantheon', type: 'sightseeing' }
+                        ]
+                    },
+                    {
+                        day: 2,
+                        title: 'Vatican City',
+                        activities: [
+                            { time: '08:00 AM', title: 'St. Peter\'s Basilica', type: 'sightseeing' },
+                            { time: '11:00 AM', title: 'Vatican Museums', type: 'art' },
+                            { time: '02:00 PM', title: 'Gelato near Spanish Steps', type: 'food' }
+                        ]
+                    }
+                ],
+                budget: {
+                    currency: 'EUR',
+                    level: 'Moderate',
+                    breakdown: [
+                        { item: 'Hotel (3-star)', cost: '€80 - €150' },
+                        { item: 'Pasta Dinner', cost: '€12 - €20' },
+                        { item: 'Espresso', cost: '€1.50' },
+                        { item: 'Museum Entry', cost: '€15 - €25' }
+                    ]
+                },
+                rules: {
+                    laws: [
+                        'No sitting on the Spanish Steps (fines apply).',
+                        'Drinking alcohol on street in glass bottles banned at night.',
+                        'Validate bus ticket immediately.'
+                    ],
+                    etiquette: [
+                        'Cover shoulders and knees in churches.',
+                        'Cappuccino is for breakfast only (before 11 AM).',
+                        'Tipping is not mandatory.'
+                    ]
+                },
+                culinary: {
+                    mustTry: [
+                        { name: 'Carbonara', desc: 'Egg, cheese, pork, and pepper.' },
+                        { name: 'Cacio e Pepe', desc: 'Pasta with cheese and pepper.' },
+                        { name: 'Suppli', desc: 'Fried rice ball with mozzarella.' }
+                    ],
+                    tips: [
+                        'Ask for "tap water" to save money.',
+                        'Avoid restaurants with picture menus.',
+                        'Breakfast is usually light (pastry + coffee).'
+                    ]
+                },
+                hotels: [
+                    { name: 'Hotel Eden', rating: 5, price: '€500+', type: 'Luxury', area: 'Via Veneto' },
+                    { name: 'The Beehive', rating: 4.2, price: '€40', type: 'Budget', area: 'Termini' },
+                    { name: 'Hotel Monti', rating: 4, price: '€120', type: 'Mid-Range', area: 'Monti' }
+                ],
+                markets: [
+                    { name: 'Campo de\' Fiori', type: 'Food', desc: 'Daily morning market for produce.' },
+                    { name: 'Porta Portese', type: 'Flea Market', desc: 'Sunday market for antiques and clothes.' }
+                ],
+                places: [
+                    { name: 'Trevi Fountain', type: 'Landmark', distance: 'Central' },
+                    { name: 'Villa Borghese', type: 'Park', distance: '10 mins walk' }
+                ]
+            },
+            {
+                id: 'bali',
+                name: 'Bali, Indonesia',
+                image: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&q=80&w=1000',
+                description: 'An Indonesian paradise known for its forested volcanic mountains, iconic rice paddies, beaches and coral reefs.',
+                avgPrice: '$',
+                tags: ['Nature', 'Relax', 'Beaches'],
+                itinerary: [
+                    {
+                        day: 1,
+                        title: 'Ubud Culture',
+                        activities: [
+                            { time: '08:00 AM', title: 'Monkey Forest', type: 'nature' },
+                            { time: '11:00 AM', title: 'Tegalalang Rice Terraces', type: 'view' },
+                            { time: '02:00 PM', title: 'Organic Lunch at Kafe', type: 'food' }
+                        ]
+                    },
+                    {
+                        day: 2,
+                        title: 'Uluwatu Beaches',
+                        activities: [
+                            { time: '10:00 AM', title: 'Padang Padang Beach', type: 'beach' },
+                            { time: '05:00 PM', title: 'Uluwatu Temple Sunset', type: 'sightseeing' },
+                            { time: '06:30 PM', title: 'Kecak Fire Dance', type: 'culture' }
+                        ]
+                    }
+                ],
+                budget: {
+                    currency: 'IDR',
+                    level: 'Low',
+                    breakdown: [
+                        { item: 'Private Villa', cost: '500k - 1.5m IDR' },
+                        { item: 'Nasi Goreng', cost: '20k - 50k IDR' },
+                        { item: 'Scooter Rental', cost: '60k - 80k IDR/day' },
+                        { item: 'Massage (1hr)', cost: '100k - 200k IDR' }
+                    ]
+                },
+                rules: {
+                    laws: [
+                        'Strict drug laws. Death penalty exists.',
+                        'International driving permit required for scooters.',
+                        'Disrespecting religious ceremonies can lead to deportation.'
+                    ],
+                    etiquette: [
+                        'Dress modestly when not on the beach.',
+                        'Do not touch people on the head.',
+                        'Use your right hand for eating.'
+                    ]
+                },
+                culinary: {
+                    mustTry: [
+                        { name: 'Nasi Goreng', desc: 'Indonesian fried rice with egg.' },
+                        { name: 'Babi Guling', desc: 'Suckling pig (Balinese specialty).' },
+                        { name: 'Satay', desc: 'Skewered grilled meat with peanut sauce.' }
+                    ],
+                    tips: [
+                        'Avoid tap water completely.',
+                        'Eat at busy places with high turnover.',
+                        'Warungs offer the best value.'
+                    ]
+                },
+                hotels: [
+                    { name: 'Four Seasons Sayan', rating: 5, price: '3m+ IDR', type: 'Luxury', area: 'Ubud' },
+                    { name: 'Puri Garden Hostel', rating: 4.8, price: '200k IDR', type: 'Budget', area: 'Ubud' },
+                    { name: 'The Slow', rating: 4.5, price: '1.5m IDR', type: 'Boutique', area: 'Canggu' }
+                ],
+                markets: [
+                    { name: 'Ubud Art Market', type: 'Souvenirs', desc: 'Handcrafted goods and clothes.' },
+                    { name: 'Love Anchor', type: 'Fashion', desc: 'Hipster market in Canggu.' }
+                ],
+                places: [
+                    { name: 'Mount Batur', type: 'Nature', distance: '1.5 hours drive' },
+                    { name: 'Seminyak Square', type: 'Shopping', distance: '30 mins drive' }
+                ]
+            }
+        ];
+
+        // --- COMPONENTS ---
+
+        const Header = () => (
+            <header className="bg-white shadow-sm sticky top-0 z-10">
+                <div className="max-w-5xl mx-auto px-4 py-4 flex justify-between items-center">
+                    <div className="flex items-center gap-2 text-blue-600">
+                        <MapPin size={24} />
+                        <h1 className="text-xl font-bold tracking-tight text-slate-800">WanderWise</h1>
+                    </div>
+                    <div className="text-sm font-medium text-slate-500">The Smart Travel Guide</div>
+                </div>
+            </header>
+        );
+
+        const DestinationCard = ({ dest, onClick }) => (
+            <div 
+                onClick={() => onClick(dest)}
+                className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer group"
+            >
+                <div className="h-48 overflow-hidden relative">
+                    <img 
+                        src={dest.image} 
+                        alt={dest.name} 
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    />
+                    <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-md text-xs font-bold text-slate-700 shadow-sm">
+                        {dest.avgPrice}
+                    </div>
+                </div>
+                <div className="p-5">
+                    <div className="flex justify-between items-start mb-2">
+                        <h3 className="text-xl font-bold text-slate-800">{dest.name}</h3>
+                    </div>
+                    <p className="text-slate-500 text-sm line-clamp-2 mb-4">{dest.description}</p>
+                    <div className="flex flex-wrap gap-2">
+                        {dest.tags.map(tag => (
+                            <span key={tag} className="px-2 py-1 bg-blue-50 text-blue-600 text-xs font-medium rounded-full">
+                                {tag}
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        );
+
+        const CabBooking = ({ currency }) => {
+            const [booked, setBooked] = React.useState(false);
+            const [loading, setLoading] = React.useState(false);
+
+            const handleBook = () => {
+                setLoading(true);
+                setTimeout(() => {
+                    setLoading(false);
+                    setBooked(true);
+                }, 1500);
+            };
+
+            if (booked) {
+                return (
+                    <div className="bg-green-50 p-6 rounded-xl border border-green-100 text-center animate-fade-in">
+                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <CheckCircle size={32} className="text-green-600" />
+                        </div>
+                        <h3 className="text-xl font-bold text-green-800 mb-2">Ride Confirmed!</h3>
+                        <p className="text-green-700 mb-4">Your driver, Satish, is arriving in 4 minutes.</p>
+                        <div className="bg-white p-4 rounded-lg shadow-sm inline-block text-left w-full max-w-xs">
+                            <div className="flex justify-between text-sm mb-2">
+                                <span className="text-slate-500">Vehicle</span>
+                                <span className="font-semibold text-slate-800">Toyota Camry (White)</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                                <span className="text-slate-500">License</span>
+                                <span className="font-semibold text-slate-800">WJ-49-22</span>
+                            </div>
+                        </div>
+                        <button 
+                            onClick={() => setBooked(false)} 
+                            className="block w-full mt-6 text-sm text-green-700 font-semibold hover:underline"
+                        >
+                            Book another ride
+                        </button>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="space-y-4">
+                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                            <input 
+                                type="text" 
+                                defaultValue="Current Location" 
+                                className="w-full bg-transparent border-b border-slate-200 pb-2 text-sm font-medium focus:outline-none" 
+                            />
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                            <input 
+                                type="text" 
+                                placeholder="Where to?" 
+                                className="w-full bg-transparent border-b border-slate-200 pb-2 text-sm font-medium focus:outline-none focus:border-blue-500 transition-colors" 
+                            />
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        {['Economy', 'Comfort', 'Luxury'].map((type, idx) => (
+                            <button key={type} className="w-full flex justify-between items-center p-3 border border-slate-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all group">
+                                <div className="flex items-center gap-3">
+                                    <Car size={20} className="text-slate-400 group-hover:text-blue-500" />
+                                    <div className="text-left">
+                                        <div className="font-bold text-slate-700 text-sm">{type}</div>
+                                        <div className="text-xs text-slate-400">3-5 min away</div>
+                                    </div>
+                                </div>
+                                <div className="font-bold text-slate-800">
+                                    {idx === 0 ? '150' : idx === 1 ? '240' : '450'} {currency}
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+
+                    <button 
+                        onClick={handleBook}
+                        disabled={loading}
+                        className="w-full bg-black text-white py-3 rounded-lg font-bold hover:bg-slate-800 transition-colors flex justify-center items-center gap-2"
+                    >
+                        {loading ? 'Confirming...' : 'Request Ride'}
+                    </button>
+                </div>
+            );
+        };
+
+        const DetailView = ({ dest, onBack }) => {
+            const [activeTab, setActiveTab] = React.useState('itinerary');
+
+            const tabs = [
+                { id: 'itinerary', label: 'Itinerary', icon: Calendar },
+                { id: 'stay', label: 'Stay & Shop', icon: BedDouble },
+                { id: 'transport', label: 'Transport', icon: Car },
+                { id: 'food', label: 'Food', icon: Utensils },
+                { id: 'rules', label: 'Rules & Tips', icon: BookOpen },
+                { id: 'budget', label: 'Budget', icon: DollarSign },
+            ];
+
+            return (
+                <div className="animate-fade-in bg-slate-50 min-h-screen">
+                    <div className="relative h-64 md:h-80 w-full">
+                        <img src={dest.image} alt={dest.name} className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end">
+                            <div className="max-w-5xl mx-auto w-full px-4 pb-6">
+                                <button 
+                                    onClick={onBack}
+                                    className="absolute top-4 left-4 bg-white/20 hover:bg-white/40 backdrop-blur-md p-2 rounded-full text-white transition-colors"
+                                >
+                                    <ChevronLeft size={24} />
+                                </button>
+                                <h1 className="text-3xl md:text-5xl font-bold text-white mb-2">{dest.name}</h1>
+                                <p className="text-white/90 max-w-xl">{dest.description}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="max-w-5xl mx-auto px-4 py-6">
+                        <div className="flex overflow-x-auto gap-2 pb-4 mb-4 scrollbar-hide">
+                            {tabs.map(tab => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setActiveTab(tab.id)}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-colors ${
+                                        activeTab === tab.id 
+                                            ? 'bg-blue-600 text-white shadow-md' 
+                                            : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                                    }`}
+                                >
+                                    {React.createElement(tab.icon, { size: 16 })}
+                                    {tab.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 min-h-[400px]">
+                            {/* Itinerary Tab */}
+                            {activeTab === 'itinerary' && (
+                                <div className="space-y-8">
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <div className="p-3 bg-blue-100 text-blue-600 rounded-xl">
+                                            <Calendar size={24} />
+                                        </div>
+                                        <div>
+                                            <h2 className="text-xl font-bold text-slate-800">Suggested Itinerary</h2>
+                                            <p className="text-slate-500 text-sm">Includes places of importance</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="space-y-8">
+                                        {dest.itinerary.map((day) => (
+                                            <div key={day.day} className="relative pl-8 border-l-2 border-slate-100">
+                                                <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-blue-600 border-4 border-white shadow-sm"></div>
+                                                <h3 className="text-lg font-bold text-slate-800 mb-4">Day {day.day}: {day.title}</h3>
+                                                <div className="space-y-4">
+                                                    {day.activities.map((act, idx) => (
+                                                        <div key={idx} className="flex gap-4 p-3 bg-slate-50 rounded-lg border border-slate-100">
+                                                            <div className="text-xs font-bold text-slate-400 min-w-[60px] pt-1">{act.time}</div>
+                                                            <div>
+                                                                <div className="font-semibold text-slate-700">{act.title}</div>
+                                                                <div className="text-xs text-blue-500 capitalize">{act.type}</div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="mt-8 pt-8 border-t border-slate-100">
+                                        <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                                            <MapPin size={18} className="text-blue-500" /> Nearby Places of Importance
+                                        </h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            {dest.places.map((place, idx) => (
+                                                <div key={idx} className="flex justify-between items-center p-3 bg-blue-50/50 rounded-lg">
+                                                    <span className="font-medium text-slate-700">{place.name}</span>
+                                                    <span className="text-xs text-slate-500">{place.distance}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Stay & Shop Tab */}
+                            {activeTab === 'stay' && (
+                                <div className="space-y-8">
+                                    <div>
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <div className="p-3 bg-indigo-100 text-indigo-600 rounded-xl">
+                                                <BedDouble size={24} />
+                                            </div>
+                                            <div>
+                                                <h2 className="text-xl font-bold text-slate-800">Nearby Hotels</h2>
+                                                <p className="text-slate-500 text-sm">Where to rest your head</p>
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            {dest.hotels.map((hotel, idx) => (
+                                                <div key={idx} className="border border-slate-100 rounded-xl p-4 hover:shadow-md transition-shadow">
+                                                    <div className="flex justify-between items-start mb-2">
+                                                        <span className={`text-xs font-bold px-2 py-1 rounded-full ${hotel.type === 'Luxury' ? 'bg-purple-100 text-purple-600' : 'bg-green-100 text-green-600'}`}>{hotel.type}</span>
+                                                        <div className="flex items-center gap-1 text-amber-400 text-xs font-bold">
+                                                            <Star size={12} fill="currentColor" /> {hotel.rating}
+                                                        </div>
+                                                    </div>
+                                                    <h3 className="font-bold text-slate-800">{hotel.name}</h3>
+                                                    <p className="text-xs text-slate-500 mb-2">{hotel.area}</p>
+                                                    <p className="font-semibold text-slate-700">{hotel.price} <span className="font-normal text-xs text-slate-400">/ night</span></p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <div className="flex items-center gap-3 mb-4 pt-6 border-t border-slate-100">
+                                            <div className="p-3 bg-pink-100 text-pink-600 rounded-xl">
+                                                <ShoppingBag size={24} />
+                                            </div>
+                                            <div>
+                                                <h2 className="text-xl font-bold text-slate-800">Markets & Shopping</h2>
+                                                <p className="text-slate-500 text-sm">Local treasures and goods</p>
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-1 gap-4">
+                                            {dest.markets.map((market, idx) => (
+                                                <div key={idx} className="flex gap-4 p-4 bg-slate-50 rounded-xl">
+                                                    <div className="bg-white p-3 rounded-lg flex items-center justify-center shadow-sm">
+                                                        <ShoppingBag size={20} className="text-pink-400" />
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="font-bold text-slate-800">{market.name}</h3>
+                                                        <p className="text-xs text-pink-500 font-medium mb-1">{market.type}</p>
+                                                        <p className="text-sm text-slate-600">{market.desc}</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Transport Tab */}
+                            {activeTab === 'transport' && (
+                                <div className="max-w-md mx-auto">
+                                    <div className="text-center mb-6">
+                                        <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                            <Navigation size={24} className="text-slate-600" />
+                                        </div>
+                                        <h2 className="text-xl font-bold text-slate-800">Book a Ride</h2>
+                                        <p className="text-slate-500 text-sm">Secure, reliable local transport</p>
+                                    </div>
+                                    <CabBooking currency={dest.budget.currency} />
+                                </div>
+                            )}
+
+                             {/* Budget Tab */}
+                            {activeTab === 'budget' && (
+                                <div>
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <div className="p-3 bg-green-100 text-green-600 rounded-xl">
+                                            <DollarSign size={24} />
+                                        </div>
+                                        <div>
+                                            <h2 className="text-xl font-bold text-slate-800">Estimated Costs</h2>
+                                            <p className="text-slate-500 text-sm">Currency: {dest.budget.currency} | Level: {dest.budget.level}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {dest.budget.breakdown.map((item, idx) => (
+                                            <div key={idx} className="flex justify-between items-center p-4 bg-slate-50 rounded-lg border border-slate-100">
+                                                <span className="font-medium text-slate-700">{item.item}</span>
+                                                <span className="font-bold text-green-600">{item.cost}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    
+                                    <div className="mt-6 p-4 bg-blue-50 rounded-lg text-sm text-blue-800 flex gap-3">
+                                        <Info className="shrink-0" size={20} />
+                                        <p>Prices are averages based on recent traveler data. Always keep a buffer for unexpected expenses.</p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Rules & Tips Tab */}
+                            {activeTab === 'rules' && (
+                                <div className="space-y-8">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <div className="p-3 bg-red-100 text-red-600 rounded-xl">
+                                            <AlertTriangle size={24} />
+                                        </div>
+                                        <div>
+                                            <h2 className="text-xl font-bold text-slate-800">Rules & Ideas</h2>
+                                            <p className="text-slate-500 text-sm">Know the law, respect the culture</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid md:grid-cols-2 gap-8">
+                                        <div>
+                                            <h3 className="font-bold text-red-600 mb-4 flex items-center gap-2">
+                                                <Info size={18} /> Important Laws
+                                            </h3>
+                                            <ul className="space-y-3">
+                                                {dest.rules.laws.map((law, idx) => (
+                                                    <li key={idx} className="flex gap-3 text-slate-700 text-sm bg-red-50 p-3 rounded-lg">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-red-400 mt-1.5 shrink-0"></span>
+                                                        {law}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+
+                                        <div>
+                                            <h3 className="font-bold text-blue-600 mb-4 flex items-center gap-2">
+                                                <CheckCircle size={18} /> Social Etiquette
+                                            </h3>
+                                            <ul className="space-y-3">
+                                                {dest.rules.etiquette.map((rule, idx) => (
+                                                    <li key={idx} className="flex gap-3 text-slate-700 text-sm bg-blue-50 p-3 rounded-lg">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0"></span>
+                                                        {rule}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-8 pt-6 border-t border-slate-100">
+                                        <h3 className="font-bold text-amber-600 mb-4 flex items-center gap-2">
+                                            <Info size={18} /> Pro Travel Tips & Ideas
+                                        </h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="p-4 bg-amber-50 rounded-lg border border-amber-100">
+                                                <h4 className="font-bold text-amber-800 mb-2 text-sm">Packing Idea</h4>
+                                                <p className="text-sm text-slate-700">Bring a universal power adapter and a reusable water bottle. For {dest.name}, lightweight breathable clothing is best.</p>
+                                            </div>
+                                            <div className="p-4 bg-amber-50 rounded-lg border border-amber-100">
+                                                <h4 className="font-bold text-amber-800 mb-2 text-sm">Local Sim Card</h4>
+                                                <p className="text-sm text-slate-700">Buy a SIM card at the airport or use an e-sim app like Airalo for cheaper data than roaming.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Food Tab */}
+                            {activeTab === 'food' && (
+                                <div>
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <div className="p-3 bg-orange-100 text-orange-600 rounded-xl">
+                                            <Utensils size={24} />
+                                        </div>
+                                        <div>
+                                            <h2 className="text-xl font-bold text-slate-800">Culinary Guide</h2>
+                                            <p className="text-slate-500 text-sm">What to eat and how to eat it</p>
+                                        </div>
+                                    </div>
+
+                                    <h3 className="font-bold text-slate-800 mb-4">Must-Try Dishes</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                                        {dest.culinary.mustTry.map((dish, idx) => (
+                                            <div key={idx} className="bg-orange-50 border border-orange-100 p-4 rounded-xl">
+                                                <div className="flex items-center gap-2 mb-2 text-orange-600 font-bold">
+                                                    <Coffee size={18} />
+                                                    {dish.name}
+                                                </div>
+                                                <p className="text-xs text-slate-600 leading-relaxed">{dish.desc}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <h3 className="font-bold text-slate-800 mb-4">Safety & Tips</h3>
+                                    <div className="bg-slate-50 p-5 rounded-xl border border-slate-100">
+                                        <ul className="space-y-3">
+                                            {dest.culinary.tips.map((tip, idx) => (
+                                                <li key={idx} className="flex items-start gap-3 text-sm text-slate-700">
+                                                    <CheckCircle size={16} className="text-green-500 mt-0.5 shrink-0" />
+                                                    {tip}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [selectedDest, setSelectedDest] = React.useState(null);
+
+            return (
+                <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
+                    {!selectedDest ? (
+                        <>
+                            <Header />
+                            <main className="max-w-5xl mx-auto px-4 py-8">
+                                <div className="text-center mb-12">
+                                    <h2 className="text-3xl font-bold text-slate-800 mb-4">Where to next?</h2>
+                                    <p className="text-slate-500 max-w-xl mx-auto">
+                                        Discover itineraries, local laws, food guides, and budget breakdowns for the world's most exciting destinations.
+                                    </p>
+                                </div>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {destinations.map(dest => (
+                                        <DestinationCard 
+                                            key={dest.id} 
+                                            dest={dest} 
+                                            onClick={setSelectedDest} 
+                                        />
+                                    ))}
+                                </div>
+                            </main>
+                        </>
+                    ) : (
+                        <DetailView 
+                            dest={selectedDest} 
+                            onBack={() => setSelectedDest(null)} 
+                        />
+                    )}
+                </div>
+            );
+        };
+
+        // Render the app
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
